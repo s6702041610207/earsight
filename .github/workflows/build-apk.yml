@@ -68,7 +68,10 @@ jobs:
       - name: Build debug APK
         run: |
           set -o pipefail
-          flutter build apk --debug 2>&1 | tee build.log || { grep -E -i "^e: |error:|exception|failed|what went wrong|jvm|inconsistent" build.log | grep -v -i "license" | head -n 50 | sed 's/^/::error::/'; grep -A6 "What went wrong" build.log | sed 's/^/::error::/'; grep -A4 "Manifest.xml.*Error:\|AndroidManifest.xml Error" build.log | head -n 40 | sed 's/^/::error::/'; tail -n 15 build.log | sed 's/^/::error::/'; exit 1; }
+          flutter build apk --debug 2>&1 | tee build.log || {
+            m=$(grep -B1 -A6 "Error:" build.log | head -n 60 | sed ':a;N;$!ba;s/%/%25/g;s/\r//g;s/\n/%0A/g'); echo "::error title=details::$m"
+            m=$(grep -A8 "What went wrong" build.log | head -n 30 | sed ':a;N;$!ba;s/\n/%0A/g'); echo "::error title=what::$m"
+            exit 1; }
 
       - uses: actions/upload-artifact@v4
         with:
