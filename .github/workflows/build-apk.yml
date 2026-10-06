@@ -33,6 +33,8 @@ jobs:
           grep -q RECORD_AUDIO android/app/src/main/AndroidManifest.xml || (echo "AndroidManifest lost permissions" && exit 1)
           # flutter create adds a counter-app widget test that does not apply to this app
           rm -f test/widget_test.dart
+          # some plugins (tflite_flutter) compile Kotlin for a different JVM target than Java; don't fail on that mismatch
+          echo "kotlin.jvm.target.validation.mode=warning" >> android/gradle.properties
 
       - name: Set minSdk 26 (needed by tflite_flutter)
         run: |
@@ -53,7 +55,7 @@ jobs:
           ls -la assets/models
           test $(stat -c%s assets/models/yamnet.tflite) -gt 1000000
 
-      - run: flutter pub get
+      - run: flutter pub get && flutter pub deps --style=compact | grep -E 'tflite|record|vibration' || true
 
       - name: Analyze (report only)
         run: flutter analyze --no-fatal-infos --no-fatal-warnings || true
@@ -66,7 +68,7 @@ jobs:
       - name: Build debug APK
         run: |
           set -o pipefail
-          flutter build apk --debug 2>&1 | tee build.log || { grep -E -i "error|exception|failed|what went wrong" build.log | head -n 40 | sed 's/^/::error::/'; tail -n 25 build.log | sed 's/^/::error::/'; exit 1; }
+          flutter build apk --debug 2>&1 | tee build.log || { grep -E -i "^e: |error:|exception|failed|what went wrong|jvm|inconsistent" build.log | grep -v -i "license" | head -n 50 | sed 's/^/::error::/'; grep -A6 "What went wrong" build.log | sed 's/^/::error::/'; tail -n 15 build.log | sed 's/^/::error::/'; exit 1; }
 
       - uses: actions/upload-artifact@v4
         with:
