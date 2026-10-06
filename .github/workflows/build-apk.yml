@@ -35,6 +35,8 @@ jobs:
           rm -f test/widget_test.dart
           # some plugins (tflite_flutter) compile Kotlin for a different JVM target than Java; don't fail on that mismatch
           echo "kotlin.jvm.target.validation.mode=warning" >> android/gradle.properties
+          # tensorflow-lite 2.11 ships 3 AARs sharing the namespace org.tensorflow.lite; newer AGP rejects that by default
+          echo "android.uniquePackageNames=false" >> android/gradle.properties
 
       - name: Set minSdk 26 (needed by tflite_flutter)
         run: |
