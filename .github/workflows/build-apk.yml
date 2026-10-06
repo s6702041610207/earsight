@@ -42,7 +42,7 @@ jobs:
             [ -f "$f" ] || continue
             sed -i -E 's/minSdk( =|Version)? *=? *flutter\.minSdkVersion/minSdk = 26/' "$f"
             sed -i -E 's/minSdkVersion +flutter\.minSdkVersion/minSdkVersion 26/' "$f"
-            echo "--- $f"; grep -n -i "minsdk\|ndkVersion" "$f" || true
+            grep -n -i "minsdk\|ndkVersion\|compileSdk\|targetSdk" "$f" | sed "s|^|::notice::$f |" || true
           done
 
       - name: Download YAMNet model
@@ -68,7 +68,7 @@ jobs:
       - name: Build debug APK
         run: |
           set -o pipefail
-          flutter build apk --debug 2>&1 | tee build.log || { grep -E -i "^e: |error:|exception|failed|what went wrong|jvm|inconsistent" build.log | grep -v -i "license" | head -n 50 | sed 's/^/::error::/'; grep -A6 "What went wrong" build.log | sed 's/^/::error::/'; tail -n 15 build.log | sed 's/^/::error::/'; exit 1; }
+          flutter build apk --debug 2>&1 | tee build.log || { grep -E -i "^e: |error:|exception|failed|what went wrong|jvm|inconsistent" build.log | grep -v -i "license" | head -n 50 | sed 's/^/::error::/'; grep -A6 "What went wrong" build.log | sed 's/^/::error::/'; grep -A4 "Manifest.xml.*Error:\|AndroidManifest.xml Error" build.log | head -n 40 | sed 's/^/::error::/'; tail -n 15 build.log | sed 's/^/::error::/'; exit 1; }
 
       - uses: actions/upload-artifact@v4
         with:
