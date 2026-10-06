@@ -6,6 +6,9 @@ on:
   push:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,6 +31,8 @@ jobs:
           flutter --version
           flutter create . --platforms=android --org com.earsight --project-name earsight
           grep -q RECORD_AUDIO android/app/src/main/AndroidManifest.xml || (echo "AndroidManifest lost permissions" && exit 1)
+          # flutter create adds a counter-app widget test that does not apply to this app
+          rm -f test/widget_test.dart
 
       - name: Set minSdk 26 (needed by tflite_flutter)
         run: |
@@ -54,13 +59,25 @@ jobs:
         run: flutter analyze --no-fatal-infos --no-fatal-warnings || true
 
       - name: Unit tests
-        run: flutter test
+        run: |
+          set -o pipefail
+          flutter test 2>&1 | tee test.log || { tail -n 40 test.log | sed 's/^/::error::/'; exit 1; }
 
       - name: Build debug APK
-        run: flutter build apk --debug
+        run: |
+          set -o pipefail
+          flutter build apk --debug 2>&1 | tee build.log || { grep -E -i "error|exception|failed|what went wrong" build.log | head -n 40 | sed 's/^/::error::/'; tail -n 25 build.log | sed 's/^/::error::/'; exit 1; }
 
       - uses: actions/upload-artifact@v4
         with:
           name: earsight-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
+
+      - name: Publish APK as a release (direct download link)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: EarSight v1 build ${{ github.run_number }}
+          files: build/app/outputs/flutter-apk/app-debug.apk
+          make_latest: true
