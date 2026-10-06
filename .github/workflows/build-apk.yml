@@ -73,6 +73,7 @@ jobs:
           flutter build apk --debug 2>&1 | tee build.log || {
             m=$(grep -B1 -A6 "Error:" build.log | head -n 60 | sed ':a;N;$!ba;s/%/%25/g;s/\r//g;s/\n/%0A/g'); echo "::error title=details::$m"
             m=$(grep -A8 "What went wrong" build.log | head -n 30 | sed ':a;N;$!ba;s/\n/%0A/g'); echo "::error title=what::$m"
+            m=$(grep -v "^\s*$" build.log | tail -n 40 | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g'); echo "::error title=tail::$m"
             exit 1; }
 
       - uses: actions/upload-artifact@v4
