@@ -89,3 +89,15 @@ jobs:
           name: EarSight v1 build ${{ github.run_number }}
           files: build/app/outputs/flutter-apk/app-debug.apk
           make_latest: true
+
+      - name: Publish build log (on failure)
+        if: failure()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: log-${{ github.run_number }}
+          name: build log ${{ github.run_number }}
+          prerelease: true
+          make_latest: false
+          files: |
+            build.log
+            test.log
