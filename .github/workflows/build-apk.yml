@@ -59,11 +59,14 @@ jobs:
 
       - run: flutter pub get && flutter pub deps --style=compact | grep -E 'tflite|record|vibration' || true
 
-      - name: Patch tflite_flutter compileSdk 31 -> 36 (its AndroidX deps need 34+)
+      - name: Patch old plugins to compileSdk 36 (their AndroidX deps need 34+)
         run: |
-          for f in $(ls -d ~/.pub-cache/hosted/pub.dev/tflite_flutter-*/android/build.gradle* 2>/dev/null); do
-            sed -i -E 's/compileSdk(Version)?( *=)? *31/compileSdk\1\2 36/' "$f"
-            grep -n "compileSdk" "$f" | sed "s|^|::notice::$f |"
+          for f in ~/.pub-cache/hosted/pub.dev/*/android/build.gradle ~/.pub-cache/hosted/pub.dev/*/android/build.gradle.kts; do
+            [ -f "$f" ] || continue
+            if grep -q -E "compileSdk(Version)?( *=)? *(2[0-9]|3[0-3])\b" "$f"; then
+              sed -i -E 's/compileSdk(Version)?( *=)? *(2[0-9]|3[0-3])\b/compileSdk\1\2 36/' "$f"
+              echo "::notice::patched $f"
+            fi
           done
 
       - name: Analyze (report only)
