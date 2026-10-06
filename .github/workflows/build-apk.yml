@@ -111,3 +111,47 @@ jobs:
           files: |
             build.log
             test.log
+
+  # UI preview on the web: https://<user>.github.io/earsight/ (AI/mic are Android-only; preview has "simulate sound" buttons)
+  web-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate web project files
+        run: |
+          flutter create . --platforms=web --org com.earsight --project-name earsight
+          rm -f test/widget_test.dart
+
+      - run: flutter pub get
+
+      - name: Build web preview
+        run: |
+          set -o pipefail
+          flutter build web --release --base-href /earsight/ 2>&1 | tee web.log || {
+            m=$(grep -B2 -A6 -i "error" web.log | head -n 60 | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g'); echo "::error title=web::$m"
+            exit 1; }
+          touch build/web/.nojekyll
+
+      - name: Publish to GitHub Pages (gh-pages branch)
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build/web
+          force_orphan: true
+
+      - name: Publish web build log (on failure)
+        if: failure()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: weblog-${{ github.run_number }}
+          name: web build log ${{ github.run_number }}
+          prerelease: true
+          make_latest: false
+          files: web.log

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:vibration/vibration.dart';
 
 import '../core/categories.dart';
@@ -24,6 +25,7 @@ class Haptics {
   };
 
   Future<void> play(AlertLevel level) async {
+    if (kIsWeb) return; // เบราว์เซอร์บนคอมสั่นไม่ได้
     _hasVibrator ??= await Vibration.hasVibrator() == true;
     if (_hasVibrator != true) return;
     _hasAmplitude ??= await Vibration.hasAmplitudeControl() == true;
@@ -33,5 +35,8 @@ class Haptics {
     );
   }
 
-  Future<void> stop() => Vibration.cancel();
+  Future<void> stop() async {
+    if (kIsWeb) return;
+    await Vibration.cancel();
+  }
 }

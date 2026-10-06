@@ -57,6 +57,10 @@ class HomeScreen extends StatelessWidget {
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.bodySmall),
                     ],
+                    if (controller.isWebPreview) ...[
+                      const SizedBox(height: 20),
+                      _WebPreviewPanel(controller: controller),
+                    ],
                     const SizedBox(height: 20),
                     const _PrivacyCard(),
                     const SizedBox(height: 20),
@@ -257,6 +261,58 @@ class _RecentList extends StatelessWidget {
             trailing: Text(formatTime(d.time), style: const TextStyle(fontSize: 16)),
           ),
       ],
+    );
+  }
+}
+
+/// แสดงเฉพาะหน้าพรีวิวบนเว็บ: กดจำลองเสียงเพื่อดูหน้าเตือนแต่ละแบบ
+class _WebPreviewPanel extends StatelessWidget {
+  const _WebPreviewPanel({required this.controller});
+  final ListenController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: const Color(0xFFFFF4E5),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.web, size: 26),
+                SizedBox(width: 8),
+                Text('โหมดพรีวิวบนเว็บ',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              ],
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'หน้านี้ไว้ดูหน้าตาแอปเท่านั้น AI จับเสียงจริงทำงานในแอป Android '
+              'แตะปุ่มด้านล่างเพื่อจำลองว่าได้ยินเสียงนั้น',
+              style: TextStyle(fontSize: 15, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final c in kCategories)
+                  ActionChip(
+                    avatar: Icon(CategoryStyle.of(c.id).icon,
+                        color: Colors.white, size: 18),
+                    label: Text('จำลอง: ${c.nameTh}',
+                        style: const TextStyle(color: Colors.white)),
+                    backgroundColor: CategoryStyle.of(c.id).color,
+                    side: BorderSide.none,
+                    onPressed: () => controller.previewAlert(c.id, addToHistory: true),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

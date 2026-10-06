@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
@@ -7,9 +8,9 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../core/categories.dart';
 import '../core/detection_engine.dart';
 import 'app_store.dart';
-import 'audio_windows.dart';
+import 'audio_windows.dart' if (dart.library.js_interop) 'audio_windows_stub.dart';
 import 'haptics.dart';
-import 'yamnet_classifier.dart';
+import 'yamnet_classifier.dart' if (dart.library.js_interop) 'yamnet_classifier_stub.dart';
 
 enum ListenState { idle, loading, listening, error }
 
@@ -28,7 +29,11 @@ class ListenController extends ChangeNotifier {
   StreamSubscription<Float32List>? _windowSub;
   StreamSubscription<double>? _levelSub;
   Timer? _autoDismiss;
+  Timer? _previewLevel;
   bool _busy = false;
+
+  /// true เมื่อรันเป็นหน้าพรีวิวบนเว็บ (ไม่มี AI / ไมค์จริง)
+  bool get isWebPreview => kIsWeb;
 
   ListenState state = ListenState.idle;
   String? errorMessage;
@@ -47,6 +52,16 @@ class ListenController extends ChangeNotifier {
 
   Future<void> start() async {
     if (state == ListenState.loading || isListening) return;
+    if (isWebPreview) {
+      // พรีวิวบนเว็บ: แสดงสถานะ "กำลังฟัง" พร้อมแถบระดับเสียงจำลอง
+      final rnd = math.Random();
+      _previewLevel = Timer.periodic(const Duration(milliseconds: 150), (_) {
+        level = 0.15 + rnd.nextDouble() * 0.35;
+        notifyListeners();
+      });
+      _setState(ListenState.listening);
+      return;
+    }
     _setState(ListenState.loading);
     try {
       _classifier ??= await YamnetClassifier.load();
@@ -75,6 +90,13 @@ class ListenController extends ChangeNotifier {
   }
 
   Future<void> stop() async {
+    _previewLevel?.cancel();
+    _previewLevel = null;
+    if (isWebPreview) {
+      level = 0;
+      _setState(ListenState.idle);
+      return;
+    }
     await _windowSub?.cancel();
     await _levelSub?.cancel();
     _windowSub = null;
@@ -135,13 +157,15 @@ class ListenController extends ChangeNotifier {
   }
 
   /// ใช้ในหน้าตั้งค่า เพื่อให้ผู้ใช้ดูหน้าตาการเตือนแต่ละแบบโดยไม่ต้องมีเสียงจริง
-  void previewAlert(String categoryId) {
-    _showAlert(Detection(
+  void previewAlert(String categoryId, {bool addToHistory = false}) {
+    final d = Detection(
       categoryId: categoryId,
       confidence: 1,
       time: DateTime.now(),
       topLabel: 'ทดสอบ',
-    ));
+    );
+    if (addToHistory) store.addHistory(d);
+    _showAlert(d);
   }
 
   void dismissAlert() {
@@ -174,6 +198,7 @@ class ListenController extends ChangeNotifier {
   void dispose() {
     store.removeListener(_syncSettings);
     _autoDismiss?.cancel();
+    _previewLevel?.cancel();
     _windowSub?.cancel();
     _levelSub?.cancel();
     _audio.dispose();
