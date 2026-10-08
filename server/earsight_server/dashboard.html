@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EarSight เครื่องแม่ข่าย</title>
+<style>
+  :root { --bg:#f5f5f7; --card:#fff; --text:#1d1d1f; --muted:#666; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: "Sarabun","Noto Sans Thai",system-ui,sans-serif; background:var(--bg); color:var(--text); }
+  header { padding:16px 20px; background:#1d1d1f; color:#fff; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+  header h1 { margin:0; font-size:22px; }
+  main { max-width:900px; margin:0 auto; padding:16px; display:grid; gap:16px; }
+  .card { background:var(--card); border-radius:14px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  h2 { margin:0 0 10px; font-size:18px; }
+  #alert { display:none; position:fixed; inset:0; color:#fff; z-index:10; cursor:pointer;
+           flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px; }
+  #alert .name { font-size:clamp(40px,9vw,88px); font-weight:800; }
+  #alert .room { font-size:clamp(22px,4vw,34px); margin-top:8px; }
+  #alert .hint { margin-top:28px; opacity:.85; font-size:18px; }
+  #alert.flash { animation: flash .6s steps(2) infinite; }
+  @keyframes flash { 50% { filter: brightness(1.45); } }
+  table { width:100%; border-collapse:collapse; font-size:16px; }
+  td, th { text-align:left; padding:8px 6px; border-bottom:1px solid #eee; }
+  .dot { display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+  .muted { color:var(--muted); }
+  .chip { display:inline-block; padding:2px 10px; border-radius:99px; color:#fff; font-size:14px; }
+  .devices { display:flex; gap:10px; flex-wrap:wrap; }
+  .dev { border:1px solid #ddd; border-radius:10px; padding:8px 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>EarSight — เครื่องแม่ข่าย</h1>
+  <span id="status" class="muted">กำลังเชื่อมต่อ...</span>
+</header>
+<div id="alert" onclick="hideAlert()">
+  <div class="name" id="aName"></div>
+  <div class="room" id="aRoom"></div>
+  <div class="hint">แตะเพื่อปิด</div>
+</div>
+<main>
+  <section class="card">
+    <h2>กล่องรับเสียง</h2>
+    <div class="devices" id="devices"><span class="muted">ยังไม่มีกล่องส่งข้อมูลมา</span></div>
+  </section>
+  <section class="card">
+    <h2>เสียงที่ตรวจพบ</h2>
+    <table>
+      <thead><tr><th>เวลา</th><th>เสียง</th><th>ห้อง</th><th>ความมั่นใจ</th><th>ที่มา</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="5" class="muted">ยังไม่มี</td></tr></tbody>
+    </table>
+  </section>
+  <p class="muted">หน้านี้ใช้ทดสอบระหว่างพัฒนา การแจ้งเตือนจริงจะส่งไปที่แอปมือถือและนาฬิกา • ไม่มีการบันทึกเสียง</p>
+</main>
+<script>
+const COLORS = { fire_alarm:"#D84315", siren:"#C62828", vehicle_horn:"#AD1457",
+                 knock:"#1565C0", doorbell:"#6A1B9A", speech:"#2E7D32" };
+const LEVEL_TH = { danger:"อันตราย", attention:"ต้องสนใจ", info:"แจ้งให้ทราบ" };
+const SOURCE_TH = { ai:"AI", door_sensor:"เซนเซอร์ประตู" };
+let last = 0, events = [], hideTimer = null;
+
+const color = id => COLORS[id] || "#455A64";
+const hhmm = t => new Date(t * 1000).toLocaleTimeString("th-TH");
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function showAlert(e) {
+  const el = document.getElementById("alert");
+  if (el.dataset.level === "danger" && el.style.display === "flex" && e.level !== "danger") return;
+  el.style.background = color(e.category_id);
+  el.dataset.level = e.level;
+  document.getElementById("aName").textContent = e.name_th;
+  document.getElementById("aRoom").textContent = `${e.room} • ${LEVEL_TH[e.level]}`;
+  el.classList.toggle("flash", e.level === "danger");
+  el.style.display = "flex";
+  clearTimeout(hideTimer);
+  if (e.level !== "danger") hideTimer = setTimeout(hideAlert, e.level === "attention" ? 10000 : 5000);
+}
+function hideAlert() { document.getElementById("alert").style.display = "none"; }
+
+function render() {
+  const rows = events.slice(-50).reverse().map(e => `<tr>
+    <td>${hhmm(e.time)}</td>
+    <td><span class="chip" style="background:${color(e.category_id)}">${esc(e.name_th)}</span></td>
+    <td>${esc(e.room)}</td>
+    <td>${Math.round(e.confidence * 100)}%</td>
+    <td class="muted">${SOURCE_TH[e.source] || e.source}${e.top_label ? " • " + esc(e.top_label) : ""}</td></tr>`);
+  document.getElementById("rows").innerHTML = rows.join("") || '<tr><td colspan="5" class="muted">ยังไม่มี</td></tr>';
+}
+
+async function poll() {
+  try {
+    const r = await fetch(`/api/events?after=${last}`);
+    const fresh = await r.json();
+    document.getElementById("status").textContent = "เชื่อมต่อแล้ว";
+    if (fresh.length) {
+      events.push(...fresh);
+      last = fresh[fresh.length - 1].id;
+      const order = { danger:0, attention:1, info:2 };
+      showAlert([...fresh].sort((a, b) => order[a.level] - order[b.level])[0]);
+      render();
+    }
+  } catch { document.getElementById("status").textContent = "ขาดการเชื่อมต่อ"; }
+}
+async function pollDevices() {
+  try {
+    const list = await (await fetch("/api/devices")).json();
+    if (!list.length) return;
+    document.getElementById("devices").innerHTML = list.map(d => `<div class="dev">
+      <span class="dot" style="background:${d.online ? "#2E7D32" : "#9E9E9E"}"></span>
+      <b>${esc(d.room)}</b> <span class="muted">(${esc(d.device)})</span><br>
+      <span class="muted">${d.online ? "ออนไลน์" : "ออฟไลน์"} • ล่าสุด ${hhmm(d.last_seen)}</span></div>`).join("");
+  } catch {}
+}
+setInterval(poll, 1000); setInterval(pollDevices, 5000); poll(); pollDevices();
+</script>
+</body>
+</html>

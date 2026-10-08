@@ -1,0 +1,59 @@
+{
+  "_note": "รายการเสียงชั่วคราว (ยกมาจากแอป v1) — รอสรุปรายการ 6 เสียงอีกครั้ง แก้ไฟล์นี้ได้เลยไม่ต้องแก้โค้ด. labels ต้องตรงกับ display_name ใน assets/models/yamnet_class_map.csv ทุกตัวอักษร. min_windows = จำนวนช่วง 0.49 วินาทีที่ต้องเจอติดกันก่อนเตือน (อันตราย = 1)",
+  "categories": [
+    {
+      "id": "fire_alarm",
+      "name_th": "สัญญาณไฟไหม้",
+      "level": "danger",
+      "labels": ["Smoke detector, smoke alarm", "Fire alarm", "Alarm"],
+      "threshold": 0.30,
+      "min_windows": 1,
+      "cooldown_s": 5
+    },
+    {
+      "id": "siren",
+      "name_th": "เสียงไซเรน",
+      "level": "danger",
+      "labels": ["Siren", "Civil defense siren", "Emergency vehicle", "Police car (siren)", "Ambulance (siren)", "Fire engine, fire truck (siren)"],
+      "threshold": 0.30,
+      "min_windows": 1,
+      "cooldown_s": 5
+    },
+    {
+      "id": "vehicle_horn",
+      "name_th": "แตรรถ",
+      "level": "danger",
+      "labels": ["Vehicle horn, car horn, honking", "Air horn, truck horn"],
+      "threshold": 0.30,
+      "min_windows": 1,
+      "cooldown_s": 5
+    },
+    {
+      "id": "knock",
+      "name_th": "เคาะประตู",
+      "level": "attention",
+      "labels": ["Knock", "Door"],
+      "threshold": 0.35,
+      "min_windows": 2,
+      "cooldown_s": 8
+    },
+    {
+      "id": "doorbell",
+      "name_th": "กริ่ง / ออด",
+      "level": "attention",
+      "labels": ["Doorbell", "Ding-dong"],
+      "threshold": 0.35,
+      "min_windows": 2,
+      "cooldown_s": 8
+    },
+    {
+      "id": "speech",
+      "name_th": "มีคนพูด / เรียก",
+      "level": "info",
+      "labels": ["Speech", "Child speech, kid speaking", "Conversation", "Shout", "Yell"],
+      "threshold": 0.60,
+      "min_windows": 2,
+      "cooldown_s": 20
+    }
+  ]
+}

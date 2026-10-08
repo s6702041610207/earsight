@@ -1,0 +1,6 @@
+fastapi>=0.110
+uvicorn>=0.29
+numpy>=1.26
+# ตัวรันโมเดล TFLite: Linux/macOS ใช้ ai-edge-litert, Windows ใช้ tensorflow
+ai-edge-litert; sys_platform != "win32"
+tensorflow; sys_platform == "win32"

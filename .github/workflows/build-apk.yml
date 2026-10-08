@@ -112,6 +112,26 @@ jobs:
             build.log
             test.log
 
+  # Server prototype: unit tests + a real YAMNet run
+  server:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt pytest httpx
+      - run: python tools/download_model.py
+      - name: Tests (incl. real model)
+        run: |
+          set -o pipefail
+          python -m pytest -v -s 2>&1 | tee test.log || { grep -E "FAILED|Error" test.log | head -n 20 | sed 's/^/::error::/'; exit 1; }
+          grep -E "silence →|siren-like" test.log | sed 's/^/::notice::/' || true
+
   # UI preview on the web: https://<user>.github.io/earsight/ (AI/mic are Android-only; preview has "simulate sound" buttons)
   web-preview:
     runs-on: ubuntu-latest

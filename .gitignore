@@ -6,3 +6,8 @@ build/
 *.iml
 android/.gradle/
 android/local.properties
+
+# server
+server/events.jsonl
+__pycache__/
+.pytest_cache/
