@@ -65,7 +65,7 @@ lib/
   ui/              # หน้าหลัก, หน้าเตือนเต็มจอ, ประวัติ, ตั้งค่า
 assets/models/     yamnet_class_map.csv (มีแล้ว), yamnet.tflite (ต้องดาวน์โหลด)
 server/            เครื่องแม่ข่าย (Python/FastAPI) รับคลิปจากกล่อง IoT → YAMNet → การแจ้งเตือน
-  sound_categories.json   รายการเสียง (ชั่วคราว รอสรุป 6 เสียง)
+  sound_categories.json   รายการเสียง 6 ประเภท (ในบ้าน: ไฟไหม้ ไซเรน เคาะประตู กริ่ง ทารกร้องไห้ ตะโกนเรียก)
   tools/box_simulator.py  จำลองกล่องด้วยไมค์โน้ตบุ๊ก (ตรรกะเดียวกับ firmware ESP32 ที่จะเขียน)
   ดูวิธีรันใน server/README.md
 ```
